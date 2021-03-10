@@ -38,10 +38,8 @@ picojson::array get_elements(const served::request &req, const std::string& stru
         throw served::request_error(served::status_5XX::INTERNAL_SERVER_ERROR, db.last_error().toStdString());
 
     picojson::array json;
-
-    const std::vector<T> elem_vect = db_build_list<T, std::vector>(q);
-    for (const T& elem: elem_vect)
-        json.push_back(picojson::value{obj_to_pico(elem, table.field_names())});
+    while (q.next())
+        json.emplace_back(gen_json_object<T>(q, table.field_names()));
     return json;
 }
 
@@ -180,17 +178,9 @@ void modify_element_list(served::response &res, const served::request &req, cons
     res << picojson::value{json}.serialize();
 }
 
-uint32_t get_element_id(const served::request &req)
-{
-    uint32_t elem_id = std::stoul(req.params["elem_id"]);
-    if (elem_id == 0)
-        throw served::request_error(served::status_4XX::BAD_REQUEST, "Unknown element id");
-    return elem_id;
-}
-
 QString get_element_id_sql(const served::request &req)
 {
-    return "id=" + QString::number(get_element_id(req));
+    return "id=" + QString::number(Helper::get_element_id(req));
 }
 
 template<typename T>
@@ -207,7 +197,7 @@ void get_element(served::response &res, const served::request &req, const std::s
 template<typename T>
 void del_element(served::response &res, const served::request &req, const std::string& struct_name)
 {
-    uint32_t elem_id = get_element_id(req);
+    uint32_t elem_id = Helper::get_element_id(req);
     Auth_Middleware::check_permission("delete_" + struct_name);
 
     const Scheme_Info scheme = Scheme::get_info(req);
@@ -259,28 +249,6 @@ void update_element(served::response &res, const served::request &req, const std
     Q_UNUSED(res);
 }
 
-struct Resource_Handler
-{
-    typedef void(*Handler_Func)(served::response &, const served::request &, const std::string&);
-
-    Resource_Handler(const std::string& struct_name, Handler_Func func) :
-        _struct_name{struct_name}, _handler{func} {}
-
-    void operator()(served::response &res, const served::request &req)
-    {
-        try {
-            _handler(res, req, _struct_name);
-        } catch (const served::request_error&) {
-            throw;
-        } catch (const std::exception& e) {
-            throw served::request_error(served::status_5XX::INTERNAL_SERVER_ERROR, e.what());
-        }
-    }
-
-    const std::string _struct_name;
-    Handler_Func _handler;
-};
-
 template<typename T>
 std::string get_struct_name()
 {
@@ -293,15 +261,16 @@ std::string get_struct_name()
 template<typename T>
 void add_resource_handler(served::multiplexer &mux, const std::string& struct_url)
 {
+    using Handler = Resource_Handler<std::string>;
     const std::string name = get_struct_name<T>();
     mux.handle(struct_url + name + "/{elem_id:[0-9]+}/")
-            .get(Resource_Handler{name, get_element<T>})
-            .del(Resource_Handler{name, del_element<T>});
+            .get(Handler{get_element<T>, name})
+            .del(Handler{del_element<T>, name});
     mux.handle(struct_url + name + '/')
-            .get(Resource_Handler{name, get_element_list<T>})
-            .post(Resource_Handler{name, create_element<T>})
-            .put(Resource_Handler{name, update_element<T>})
-            .method(served::PATCH, Resource_Handler{name, modify_element_list<T>});
+            .get(Handler{get_element_list<T>, name})
+            .post(Handler{create_element<T>, name})
+            .put(Handler{update_element<T>, name})
+            .method(served::PATCH, Handler{modify_element_list<T>, name});
 }
 
 Scheme_Structure::Scheme_Structure(served::multiplexer &mux, const std::string &scheme_path)

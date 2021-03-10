@@ -4,65 +4,12 @@
 #define PICOJSON_USE_INT64
 #include <picojson/picojson.h>
 
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QJsonDocument>
 #include <QDateTime>
 
 #include <Helpz/db_builder.h>
 
 namespace Das {
 namespace Rest {
-
-template<typename T>
-void fill_json_object(QJsonObject& obj, const T& item, const QStringList& names)
-{
-    for (int i = 0; i < T::COL_COUNT; ++i)
-    {
-        obj.insert(names.at(i), QJsonValue::fromVariant(T::value_getter(item, i)));
-    }
-}
-
-template<typename T>
-QJsonObject get_json_object(const QSqlQuery& query, const QStringList& names)
-{
-    QJsonObject obj;
-
-    if (query.record().count() >= T::COL_COUNT)
-    {
-        const T item = Helpz::DB::db_build<T>(query);
-        fill_json_object(obj, item, names);
-    }
-    return obj;
-}
-
-template<typename T>
-QJsonObject get_json_object(const QSqlQuery& query)
-{
-    const QStringList names = T::table_column_names();
-    return get_json_object<T>(query, names);
-}
-
-template<typename T>
-QJsonArray gen_json_array(const QString& suffix = QString(), const QVariantList& values = QVariantList())
-{
-    Helpz::DB::Base& db = Helpz::DB::Base::get_thread_local_instance();
-    QStringList names = T::table_column_names();
-    QJsonArray json_array;
-    auto q = db.select(Helpz::DB::db_table<T>(), suffix, values);
-    while(q.next())
-    {
-        json_array.push_back(get_json_object<T>(q, names));
-    }
-
-    return json_array;
-}
-
-template<typename T>
-std::string gen_json_list(const QString& suffix = QString(), const QVariantList& values = QVariantList())
-{
-    return QJsonDocument(gen_json_array<T>(suffix, values)).toJson().toStdString();
-}
 
 template<typename T, typename... Args>
 void set_variant_from_json_value(QVariant& value, const picojson::value& json_value)
@@ -226,6 +173,41 @@ picojson::object obj_to_pico(const T& item, const QStringList& names)
     for (int i = 0; i < T::COL_COUNT; ++i)
         obj.emplace(names.at(i).toStdString(), pico_from_qvariant(T::value_getter(item, i)));
     return obj;
+}
+
+template<typename T>
+picojson::object gen_json_object(const QSqlQuery& query, const QStringList& names)
+{
+    if (query.record().count() < T::COL_COUNT)
+        return {};
+    const T item = Helpz::DB::db_build<T>(query);
+    return obj_to_pico(item, names);
+}
+
+template<typename T>
+picojson::object gen_json_object(const QSqlQuery& query)
+{
+    const QStringList names = T::table_column_names();
+    return gen_json_object<T>(query, names);
+}
+
+template<typename T>
+picojson::array gen_json_array(const QString& suffix = QString(), const QVariantList& values = QVariantList())
+{
+    Helpz::DB::Base& db = Helpz::DB::Base::get_thread_local_instance();
+    QStringList names = T::table_column_names();
+    picojson::array json_array;
+    auto q = db.select(Helpz::DB::db_table<T>(), suffix, values);
+    while (q.next())
+        json_array.emplace_back(gen_json_object<T>(q, names));
+
+    return json_array;
+}
+
+template<typename T>
+std::string gen_json_list(const QString& suffix = QString(), const QVariantList& values = QVariantList())
+{
+    return picojson::value(gen_json_array<T>(suffix, values)).serialize();
 }
 
 } // namespace Rest

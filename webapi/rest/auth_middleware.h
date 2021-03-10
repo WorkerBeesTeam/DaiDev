@@ -31,6 +31,7 @@ public:
     static const User& get_thread_local_user();
 
     static void check_permission(const std::string& permission);
+    static bool has_permission(const std::string& permission);
 
     Auth_Middleware(std::shared_ptr<JWT_Helper> jwt_helper, const std::vector<std::string>& exclude_path = {});
     void operator ()(served::response &, const served::request & req);

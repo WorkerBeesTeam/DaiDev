@@ -26,6 +26,16 @@ void Auth_Middleware::check_permission(const std::string &permission)
         throw served::request_error(served::status_4XX::FORBIDDEN, "You don't have permission for this: " + permission);
 }
 
+bool Auth_Middleware::has_permission(const std::string &permission)
+{
+    try {
+        check_permission(permission);
+    } catch (...) {
+        return false;
+    }
+    return true;
+}
+
 Auth_Middleware::Auth_Middleware(std::shared_ptr<JWT_Helper> jwt_helper, const std::vector<std::string>& exclude_path) :
     exclude_path_vect_(exclude_path), jwt_helper_(jwt_helper)
 {

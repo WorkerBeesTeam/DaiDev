@@ -136,7 +136,7 @@ void Scheme::get_dig_status(served::response &res, const served::request &req)
         Q_RETURN_ARG(Scheme_Status, scheme_status),
         Q_ARG(uint32_t, scheme.id()));
 
-    QJsonArray j_array;
+    picojson::array json_array;
 
     if (!scheme_status.status_set_.empty())
     {
@@ -165,22 +165,26 @@ void Scheme::get_dig_status(served::response &res, const served::request &req)
             group_title_map.emplace(q.value(0).toUInt(), group_title);
         }
 
-        QJsonObject j_obj;
         for (const DIG_Status& status: scheme_status.status_set_)
         {
-            fill_json_object(j_obj, status, status_column_names);
-            j_obj["args"] = QJsonArray::fromStringList(status.args());
-            j_obj.insert("title", group_title_map[status.group_id()]);
-            j_array.push_back(j_obj);
+            picojson::array args;
+            QStringList args_list = status.args();
+            for (const QString& arg: args_list)
+                args.push_back(picojson::value{arg.toStdString()});
+
+            picojson::object json_obj = obj_to_pico(status, status_column_names);
+            json_obj.emplace("args", std::move(args));
+            json_obj.emplace("title", group_title_map[status.group_id()].toStdString());
+            json_array.push_back(picojson::value{std::move(json_obj)});
         }
     }
 
-    QJsonObject j_obj;
-    j_obj.insert("items", j_array);
-    j_obj.insert("connection", static_cast<int>(scheme_status.connection_state_));
+    picojson::object json;
+    json.emplace("items", std::move(json_array));
+    json.emplace("connection", static_cast<int64_t>(scheme_status.connection_state_));
 
     res.set_header("Content-Type", "application/json");
-    res << QJsonDocument(j_obj).toJson().toStdString();
+    res << picojson::value{std::move(json)}.serialize();
 }
 
 void Scheme::get_dig_status_type(served::response &res, const served::request &req)
@@ -201,32 +205,39 @@ void Scheme::get_device_item_value(served::response &res, const served::request 
         Q_RETURN_ARG(QVector<Device_Item_Value>, values),
         Q_ARG(uint32_t, scheme.id()));
 
-    QJsonArray j_array;
+    picojson::array j_array;
+
+    using T = Device_Item_Value;
+    QStringList names = T::table_column_names();
+    names[T::COL_item_id] = "id";
+    names[T::COL_timestamp_msecs] = "ts";
+    names[T::COL_raw_value] = "raw";
 
     for (const Device_Item_Value& value: values)
     {
-        QJsonObject obj;
-        obj.insert("id", static_cast<int>(value.item_id()));
-        obj.insert("ts", value.timestamp_msecs());
-        obj.insert("user_id", static_cast<int>(value.user_id()));
-        obj.insert("raw", QJsonValue::fromVariant(value.raw_value()));
+        picojson::object obj = obj_to_pico(value, names);
+        obj.emplace("id", static_cast<int64_t>(value.item_id()));
+        obj.emplace("ts", static_cast<int64_t>(value.timestamp_msecs()));
+        obj.emplace("user_id", static_cast<int64_t>(value.user_id()));
+        obj.emplace("raw", pico_from_qvariant(value.raw_value()));
+        obj.emplace("value", pico_from_qvariant(value.value()));
+
         if (value.is_big_value())
         {
-            obj.insert("display", value.value().toString().left(16));
-            obj.insert("raw_value", value.raw_value().toString().left(16));
+            obj.emplace("raw_value", value.raw_value().toString().left(16).toStdString());
+            obj.emplace("display", value.value().toString().left(16).toStdString());
         }
         else
         {
-            obj.insert("display", QJsonValue::fromVariant(value.value()));
-            obj.insert("raw_value", QJsonValue::fromVariant(value.raw_value()));
+            obj.emplace("raw_value", pico_from_qvariant(value.raw_value()));
+            obj.emplace("display", pico_from_qvariant(value.value()));
         }
-        obj.insert("value", QJsonValue::fromVariant(value.value()));
 
-        j_array.push_back(obj);
+        j_array.emplace_back(std::move(obj));
     }
 
     res.set_header("Content-Type", "application/json");
-    res << QJsonDocument(j_array).toJson().toStdString();
+    res << picojson::value{std::move(j_array)}.serialize();
 }
 
 void Scheme::get_disabled_status(served::response &res, const served::request &req)

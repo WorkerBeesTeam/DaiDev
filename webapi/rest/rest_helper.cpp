@@ -1,7 +1,4 @@
-
-#include <served/status.hpp>
-#include <served/request_error.hpp>
-
+#include "json_helper.h"
 #include "rest_helper.h"
 
 namespace Das {
@@ -30,6 +27,14 @@ picojson::object Helper::parse_object(const std::string& json_raw)
 picojson::array Helper::parse_array(const std::string &json_raw)
 {
     return parse_picojson<picojson::array>(json_raw, "Array is expected");
+}
+
+uint32_t Helper::get_element_id(const served::request &req, const std::string &key)
+{
+    uint32_t elem_id = stoa_or(req.params[key]);
+    if (elem_id == 0)
+        throw served::request_error(served::status_4XX::BAD_REQUEST, "Unknown element id");
+    return elem_id;
 }
 
 } // namespace Rest

@@ -26,6 +26,7 @@
 #include <Das/db/value_view.h>
 #include <Das/db/user.h>
 #include <Das/db/auth_group.h>
+#include <Das/db/scheme_group.h>
 #include <Das/device.h>
 #include <Das/type_managers.h>
 
@@ -208,12 +209,24 @@ inline Delete_Info_List db_delete_info<Chart>(const QString& db_name)
     };
 }
 
+template<>
+inline Delete_Info_List db_delete_info<DB::Scheme_Group>(const QString& db_name)
+{
+    return {
+        { Helpz::DB::db_table<DB::Scheme_Group_Scheme>(db_name), DB::Scheme_Group_Scheme::COL_scheme_group_id },
+        { Helpz::DB::db_table<DB::Scheme_Group_User>(db_name), DB::Scheme_Group_User::COL_group_id }
+    };
+}
+
 // has_scheme_id
 template<typename T> constexpr bool has_scheme_id() { return true; }
 template<> inline constexpr bool has_scheme_id<User>() { return false; }
 template<> inline constexpr bool has_scheme_id<User_Groups>() { return false; }
 template<> inline constexpr bool has_scheme_id<Auth_Group>() { return false; }
 template<> inline constexpr bool has_scheme_id<Auth_Group_Permission>() { return false; }
+template<> inline constexpr bool has_scheme_id<DB::Scheme_Group>() { return false; }
+template<> inline constexpr bool has_scheme_id<DB::Scheme_Group_Scheme>() { return false; }
+template<> inline constexpr bool has_scheme_id<DB::Scheme_Group_User>() { return false; }
 
 template<typename T>
 QString get_full_field_name(int index, bool add_short_name = false)
