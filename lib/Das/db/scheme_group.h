@@ -11,7 +11,7 @@ namespace DB {
 
 class DAS_LIBRARY_SHARED_EXPORT Scheme_Group : public ID_Type
 {
-    HELPZ_DB_META(Scheme_Group, "das_scheme_group", "sg", DB_A(id), DB_A(name))
+    HELPZ_DB_META(Scheme_Group, "scheme_group", "sg", DB_A(id), DB_A(name))
 public:
     explicit Scheme_Group(uint32_t id = 0, const QString &name = {});
     Scheme_Group(Scheme_Group&& other) = default;
@@ -33,7 +33,7 @@ QDataStream &operator<<(QDataStream &ds, const Scheme_Group &item);
 
 class DAS_LIBRARY_SHARED_EXPORT Scheme_Group_Scheme : public Base_Type
 {
-    HELPZ_DB_META(Scheme_Group_Scheme, "das_scheme_groups", "sgs", DB_A(id), DB_A(scheme_group_id), DB_A(scheme_id))
+    HELPZ_DB_META(Scheme_Group_Scheme, "scheme_groups", "sgs", DB_A(id), DB_A(scheme_group_id), DB_A(scheme_id))
 public:
     explicit Scheme_Group_Scheme(uint32_t id = 0, uint32_t scheme_group_id = 0, uint32_t scheme_id = 0);
     Scheme_Group_Scheme(Scheme_Group_Scheme&& other) = default;
@@ -55,7 +55,7 @@ QDataStream &operator<<(QDataStream &ds, const Scheme_Group_Scheme &item);
 
 class DAS_LIBRARY_SHARED_EXPORT Scheme_Group_User : public ID_Type
 {
-    HELPZ_DB_META(Scheme_Group_User, "das_scheme_group_user", "sgu", DB_A(id), DB_A(group_id), DB_A(user_id))
+    HELPZ_DB_META(Scheme_Group_User, "scheme_group_user", "sgu", DB_A(id), DB_A(group_id), DB_A(user_id))
 public:
     explicit Scheme_Group_User(uint32_t id = 0, uint32_t group_id = 0, uint32_t user_id = 0);
     Scheme_Group_User(Scheme_Group_User&& other) = default;

@@ -81,8 +81,11 @@ Scheme_Group::Scheme_Group(served::multiplexer &mux)
         values.push_back(scheme_group_id);
     }
 
-    sql += "WHERE " + where;
-    sql += " GROUP BY sg.id";
+    if (!where.isEmpty())
+    {
+        sql += "WHERE " + where;
+        sql += " GROUP BY sg.id";
+    }
     return gen_json_array<DB::Scheme_Group>(sql, values);
 }
 
