@@ -229,7 +229,9 @@ void Scheme_Group::get_schemes(served::response &res, const served::request &req
     picojson::array json;
     while (q.next())
     {
-        picojson::object obj = gen_json_object<T>(q, table.field_names());
+        picojson::object obj;
+        for (int i = 0; i < table.field_names().size(); ++i)
+            obj.emplace(table.field_names().at(i).toStdString(), pico_from_qvariant(q.value(i)));
         json.emplace_back(std::move(obj));
     }
 
