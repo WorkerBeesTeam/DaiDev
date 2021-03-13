@@ -27,6 +27,11 @@ void User::get_element_list(served::response &res, const served::request &req)
         [](unsigned char c){ return std::tolower(c); });
     bool is_header = is_header_str == "1" || is_header_str == "true";
 
+    uint32_t offset = stoa_or(req.query["offset"]);
+    uint32_t limit = stoa_or(req.query["limit"], static_cast<unsigned long>(10));
+    if (limit > 100)
+        limit = 100; // TODO: configurable?
+
     Auth_Middleware::check_permission("view_user");
 
     using T = DB::User;
@@ -45,7 +50,7 @@ void User::get_element_list(served::response &res, const served::request &req)
     picojson::array json_array;
 
     Helpz::DB::Base& db = Helpz::DB::Base::get_thread_local_instance();
-    auto q = db.select(table);
+    auto q = db.select(table, "LIMIT " + QString::number(offset) + ", " + QString::number(limit));
     while (q.next())
     {
         picojson::object obj;
