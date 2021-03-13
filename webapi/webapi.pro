@@ -34,6 +34,7 @@ SOURCES += main.cpp \
     rest/rest_scheme.cpp \
     rest/rest_scheme_group.cpp \
     rest/rest_scheme_structure.cpp \
+    rest/rest_user.cpp \
     rest/scheme_copier.cpp \
     worker.cpp \
     websocket.cpp \
@@ -63,6 +64,7 @@ HEADERS += \
     rest/rest_scheme.h \
     rest/rest_scheme_group.h \
     rest/rest_scheme_structure.h \
+    rest/rest_user.h \
     rest/scheme_copier.h \
     worker.h \
     websocket.h \

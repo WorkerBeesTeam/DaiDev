@@ -19,6 +19,7 @@
 #include "auth_middleware.h"
 #include "rest_scheme_group.h"
 #include "rest_scheme.h"
+#include "rest_user.h"
 #include "rest.h"
 
 namespace Das {
@@ -71,8 +72,9 @@ void Restful::run(DBus::Interface* dbus_iface, std::shared_ptr<JWT_Helper> jwt_h
             res.set_header("Content-Type", "application/json");
         });
 
-        auto scheme_groups = std::make_shared<Scheme_Group>(mux);
+        auto scheme_group = std::make_shared<Scheme_Group>(mux);
         auto scheme = std::make_shared<Scheme>(mux, dbus_iface);
+        auto user = std::make_shared<User>(mux);
 
         mux.handle("auth_group").get([](served::response &res, const served::request &req)
         {

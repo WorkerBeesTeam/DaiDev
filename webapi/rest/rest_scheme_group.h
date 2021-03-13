@@ -1,10 +1,7 @@
 #ifndef DAS_REST_SCHEME_GROUP_H
 #define DAS_REST_SCHEME_GROUP_H
 
-#define PICOJSON_USE_INT64
-#include <picojson/picojson.h>
-
-#include <served/served.hpp>
+#include <served/multiplexer.hpp>
 
 namespace Das {
 namespace Rest {

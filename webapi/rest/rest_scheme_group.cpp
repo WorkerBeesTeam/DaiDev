@@ -189,10 +189,11 @@ void Scheme_Group::add_scheme(served::response &res, const served::request &req)
 
     elem.set_id(id.toUInt());
 
-    picojson::value elem_val{obj_to_pico(elem, table.field_names())};
+    picojson::object json = obj_to_pico(elem, table.field_names());
+    json.erase("id");
 
     res.set_header("Content-Type", "application/json");
-    res << elem_val.serialize();
+    res << picojson::value{std::move(json)}.serialize();
 }
 
 void Scheme_Group::del_scheme(served::response &res, const served::request &req)
@@ -240,6 +241,7 @@ void Scheme_Group::add_user(served::response &res, const served::request &req)
 {
     using T = DB::Scheme_Group_User;
     T elem(0, Helper::get_element_id(req), Helper::get_element_id(req, "sg_user_id"));
+    bool is_admin = req.query["role"] == "admin";
     Auth_Middleware::check_permission("add_scheme_group_user");
 
     Table table = db_table<T>();
@@ -254,10 +256,12 @@ void Scheme_Group::add_user(served::response &res, const served::request &req)
 
     elem.set_id(id.toUInt());
 
-    picojson::value elem_val{obj_to_pico(elem, table.field_names())};
+    picojson::object json = obj_to_pico(elem, table.field_names());
+    json.erase("id");
+    json.emplace("role", is_admin ? "admin" : "user");
 
     res.set_header("Content-Type", "application/json");
-    res << elem_val.serialize();
+    res << picojson::value{std::move(json)}.serialize();
 }
 
 void Scheme_Group::del_user(served::response &res, const served::request &req)

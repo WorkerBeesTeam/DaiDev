@@ -15,9 +15,9 @@ namespace Rest {
 
 using namespace Helpz::DB;
 
-thread_local User thread_local_user;
+thread_local Auth_User thread_local_user;
 
-/*static*/ const User& Auth_Middleware::get_thread_local_user() { return thread_local_user; }
+/*static*/ const Auth_User& Auth_Middleware::get_thread_local_user() { return thread_local_user; }
 
 void Auth_Middleware::check_permission(const std::string &permission)
 {

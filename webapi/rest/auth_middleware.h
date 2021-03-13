@@ -13,7 +13,7 @@ class JWT_Helper;
 
 namespace Rest {
 
-struct User
+struct Auth_User
 {
     uint32_t id_;
     std::set<uint32_t> scheme_group_set_;
@@ -28,7 +28,7 @@ struct User
 class Auth_Middleware
 {
 public:
-    static const User& get_thread_local_user();
+    static const Auth_User& get_thread_local_user();
 
     static void check_permission(const std::string& permission);
     static bool has_permission(const std::string& permission);
