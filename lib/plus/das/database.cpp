@@ -1,3 +1,8 @@
+
+#include <botan/pbkdf2.h>
+#include <botan/base64.h>
+#include <botan/parsing.h>
+
 #include <QtSerialBus/QModbusDataUnit>
 #include <QDebug>
 #include <QElapsedTimer>
@@ -283,9 +288,34 @@ void Helper::init_scheme(Scheme *scheme, bool typesAlreadyFilled)
     return q.next() && q.value(0).toUInt() != 0;
 }
 
-bool Helper::is_admin(uint32_t user_id)
+/*static*/ bool Helper::is_admin(uint32_t user_id)
 {
     return DB::Helper::check_permission(user_id, "change_logentry");
+}
+
+/*static*/ bool Helper::compare_passhash(const std::string &password, const std::string &hash_data) noexcept(false)
+{
+    // hash: pbkdf2_sha256$180000$J4uFUE2UxAjK$SqMvresLM1kwcmLkdblP3dDLeAlmZ3OL9rXZxiI2Jok=
+    const std::vector<std::string> data_list = Botan::split_on(hash_data, '$');
+    if (data_list.size() != 4 || data_list.at(0) != "pbkdf2_sha256")
+    {
+        qWarning() << "Unknown algorithm";
+        return false;
+    }
+    const std::size_t kdf_iterations = std::stoul(data_list.at(1));
+    const std::string& salt = data_list.at(2);
+    const Botan::secure_vector<uint8_t> hash = Botan::base64_decode(data_list.at(3));
+    const size_t PASSHASH9_PBKDF_OUTPUT_LEN = 32; // 256 bits output
+
+    auto pbkdf_prf = Botan::MessageAuthenticationCode::create("HMAC(SHA-256)");
+    const Botan::PKCS5_PBKDF2 kdf(pbkdf_prf.release()); // takes ownership of pointer
+
+    const Botan::secure_vector<uint8_t> cmp = kdf.derive_key(
+        PASSHASH9_PBKDF_OUTPUT_LEN, password,
+        reinterpret_cast<const uint8_t*>(salt.c_str()), salt.size(),
+        kdf_iterations).bits_of();
+
+    return Botan::constant_time_compare(cmp.data(), hash.data(), std::min(cmp.size(), hash.size()));
 }
 
 } // namespace DB

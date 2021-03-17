@@ -11,8 +11,10 @@
 
 #include <Helpz/net_protocol.h>
 #include <Helpz/settingshelper.h>
+#include <Helpz/db_base.h>
 
 #include <Das/commands.h>
+#include <Das/db/scheme_group.h>
 #include <plus/das/jwt_helper.h>
 
 #define PICOJSON_USE_INT64
@@ -90,6 +92,8 @@ namespace Das {
 Q_LOGGING_CATEGORY(WebSockLog, "net.web")
 
 namespace Net {
+
+using namespace Helpz::DB;
 
 Websocket_Client::Websocket_Client() :
     id_(0), auth_sended_time_(QDateTime::currentMSecsSinceEpoch())
@@ -416,24 +420,24 @@ bool WebSocket::auth(const QByteArray& token, Websocket_Client& client)
         if (json_value.is<picojson::object>())
         {
             const picojson::object obj = json_value.get<picojson::object>();
-            const picojson::value scheme_groups_val = obj.at("groups");
-            if (scheme_groups_val.is<picojson::array>())
-            {
-                const picojson::array scheme_groups_arr = scheme_groups_val.get<picojson::array>();
-                if (!scheme_groups_arr.empty())
-                {
-                    for (const picojson::value& val: scheme_groups_arr)
-                    {
-//                        std::cout << "scheme_group_id: " << val.to_str() << std::endl;
-                        client.scheme_group_id_set_.insert(val.get<int64_t>());
-                    }
-//                    std::cout << "user_id: " << obj.at("user_id").to_str() << std::endl;
-                    client.id_ = obj.at("user_id").get<int64_t>();
+//            std::cout << "user_id: " << obj.at("user_id").to_str() << std::endl;
+            client.id_ = obj.at("user_id").get<int64_t>();
 
-//                    std::cout << "JSON PARSED" << std::endl;
-                    return client.id_;
-                }
+            using T = DB::Scheme_Group_User;
+            Table table = db_table<T>();
+            const QString where = "WHERE " + table.field_names().at(T::COL_user_id) + "=?";
+            table.field_names() = QStringList{table.field_names().at(T::COL_group_id)};
+
+            Base& db = Base::get_thread_local_instance();
+            QSqlQuery q = db.select(table, where, {client.id_});
+            while (q.next())
+            {
+                client.scheme_group_id_set_.insert(q.value(0).toUInt());
             }
+
+            if (client.scheme_group_id_set_.empty())
+                client.id_ = 0;
+            return client.id_;
         }
         throw std::runtime_error("Bad payload");
     }
@@ -693,7 +697,8 @@ void WebSocket::send(const Scheme_Info &scheme, const QByteArray &data) const
                 it.key()->sendBinaryMessage(QByteArray(1, WS_AUTH));
             }
         }
-        else if (scheme.id() == 0 || (it.value()->last_scheme_id_queried_ == scheme.id() && scheme.check_scheme_groups(it.value()->scheme_group_id_set_)))
+        else if (scheme.id() == 0 || (it.value()->last_scheme_id_queried_ == scheme.id()
+                                      && scheme.check_scheme_groups(it.value()->scheme_group_id_set_)))
         {
             it.key()->sendBinaryMessage(data);
         }

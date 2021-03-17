@@ -19,6 +19,18 @@ T parse_picojson(const std::string& json_raw, const std::string& type_err_text)
     return std::move(parsed_json);
 }
 
+std::string Helper::get_cookie(const served::request &req, const std::string &key)
+{
+    const std::string cookie = req.header("cookie");
+    std::size_t pos = cookie.find(key + '=', 0);
+    if (pos != std::string::npos)
+    {
+        pos += key.size() + 1;
+        return cookie.substr(pos, cookie.find(';', pos) - pos);
+    }
+    return {};
+}
+
 picojson::object Helper::parse_object(const std::string& json_raw)
 {
     return parse_picojson<picojson::object>(json_raw, "Object is expected");

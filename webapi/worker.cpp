@@ -173,7 +173,8 @@ void Worker::init_restful(QSettings* s)
         Helpz::Param{"Thread_Count", 3},
         Helpz::Param<std::string>{"Address", "localhost"},
         Helpz::Param<std::string>{"Port", "8123"},
-        Helpz::Param<std::string>{"BasePath", ""}
+        Helpz::Param<std::string>{"BasePath", ""},
+        Helpz::Param<std::chrono::seconds>{"TokenTimeoutSec", std::chrono::seconds{3600}}
     ).obj<Rest::Config>();
 
     restful_ = new Rest::Restful{dbus_, jwt_helper_, rest_config};

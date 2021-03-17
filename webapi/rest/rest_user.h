@@ -11,6 +11,7 @@ class User
 public:
     User(served::multiplexer &mux);
 
+private:
     static void get_element_list(served::response& res, const served::request& req);
 };
 

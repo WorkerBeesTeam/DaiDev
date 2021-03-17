@@ -14,6 +14,8 @@ namespace Rest {
 
 struct Helper
 {
+    static std::string get_cookie(const served::request &req, const std::string& key);
+
     static picojson::object parse_object(const std::string& json_raw);
     static picojson::array parse_array(const std::string& json_raw);
 

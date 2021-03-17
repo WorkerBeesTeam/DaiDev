@@ -1,8 +1,6 @@
 #include <iostream>
 #include <sstream>
 
-#include <botan-2/botan/pbkdf2.h>
-
 #include <QJsonDocument>
 #include <QDateTime>
 
@@ -11,6 +9,7 @@
 
 #include <Das/db/device_item_value.h>
 #include <plus/das/database_delete_info.h>
+#include <plus/das/database.h>
 
 #include "server.h"
 #include "db_scheme.h"
@@ -150,7 +149,7 @@ global::global(const QString &name, Helpz::DB::Thread* db_thread) :
 QVector<QPair<QUuid, QString>> global::getUserDevices(const QString &login, const QString &password)
 {
     auto query = select({db_table_name<User>(), {}, {"id", "password"}}, "WHERE username = ?", {login});
-    if (query.next() && compare_django_passhash(password, query.value(1).toByteArray()))
+    if (query.next() && Helper::compare_passhash(password.toStdString(), query.value(1).toByteArray().toStdString()))
     {
         query.finish();
         query.clear();
@@ -195,7 +194,7 @@ void global::check_auth(const Authentication_Info &auth_info, Server::Protocol_B
         return;
     }
 
-    if (!compare_django_passhash(auth_info.password(), query.value(3).toByteArray()))
+    if (!Helper::compare_passhash(auth_info.password().toStdString(), query.value(3).toByteArray().toStdString()))
     {
         qWarning() << "Password not equals. Scheme:" << auth_info.scheme_name() << "Login:" << auth_info.login()
                    << "Pwd:" << auth_info.password();
@@ -248,36 +247,6 @@ void global::check_auth(const Authentication_Info &auth_info, Server::Protocol_B
     while (query.next())
         scheme_groups.insert(query.value(0).toUInt());
     info_out->set_scheme_groups(std::move(scheme_groups));
-}
-
-/*static*/ bool global::compare_django_passhash(const QString& password, const QByteArray& passHashData)
-{
-    auto data_list = passHashData.split('$');
-    if (data_list.size() != 4 || data_list.at(0) != "pbkdf2_sha256")
-    {
-//        qCCritical(ManagerLog) << "Unknown algoritm";
-        std::cerr << "Unknown algoritm" << std::endl;
-        return false;
-    }
-    std::size_t kdf_iterations = data_list.at(1).toUInt();
-    const QByteArray& salt = data_list.at(2);
-    auto hash = QByteArray::fromBase64(data_list.at(3));
-    const size_t PASSHASH9_PBKDF_OUTPUT_LEN = 32; // 256 bits output
-
-    namespace B = Botan;
-    auto pbkdf_prf = B::MessageAuthenticationCode::create("HMAC(SHA-256)");
-    B::PKCS5_PBKDF2 kdf(pbkdf_prf.release()); // takes ownership of pointer
-
-    B::secure_vector<uint8_t> cmp = kdf.derive_key(
-        PASSHASH9_PBKDF_OUTPUT_LEN,
-        password.toStdString(),
-        reinterpret_cast<const uint8_t*>(salt.constData()),
-        static_cast<uint>(salt.size()),
-        kdf_iterations).bits_of();
-
-    return B::constant_time_compare(cmp.data(),
-                                    reinterpret_cast<const uint8_t*>(hash.constData()),
-                                    static_cast<uint>(hash.size()));
 }
 
 } // namespace DB

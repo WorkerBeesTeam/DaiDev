@@ -39,6 +39,8 @@ public:
 
     static bool check_permission(uint32_t user_id, const std::string& permission);
     static bool is_admin(uint32_t user_id);
+
+    static bool compare_passhash(const std::string &password, const std::string &hash_data) noexcept(false);
 private:
 };
 

@@ -2,6 +2,7 @@
 #include <botan/parsing.h>
 #include <served/request_error.hpp>
 
+#include "rest_helper.h"
 #include "csrf_middleware.h"
 
 #define CSRF_SECRET_LENGTH 32
@@ -48,14 +49,7 @@ void CSRF_Middleware::check_cookie_token(const std::string& token, served::respo
 
 std::string CSRF_Middleware::get_cookie_token(const served::request& req) const
 {
-    const std::string cookie_raw = req.header("cookie");
-    std::size_t pos = cookie_raw.find(cookie_name + '=', 0);
-    if (pos != std::string::npos)
-    {
-        pos += cookie_name.size() + 1;
-        return cookie_raw.substr(pos, cookie_raw.find(';', pos) - pos);
-    }
-    return {};
+    return Helper::get_cookie(req, cookie_name);
 }
 
 std::string CSRF_Middleware::unsalt_csrf_token(const std::string& token)

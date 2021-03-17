@@ -166,7 +166,6 @@ public:
     QVector<QPair<QUuid, QString>> getUserDevices(const QString& login, const QString& password);
     void check_auth(const Authentication_Info& auth_info, Server::Protocol_Base *info_out, QUuid &device_connection_id);
 private:
-    static bool compare_django_passhash(const QString &password, const QByteArray& passHashData);
 };
 
 } // namespace DB

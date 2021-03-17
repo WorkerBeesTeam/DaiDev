@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <set>
+#include <chrono>
 
 #include <QJsonDocument>
 
@@ -24,7 +25,8 @@ public:
     JWT_Helper(const std::string& secret_key);
     ~JWT_Helper();
 
-    std::string create(uint32_t user_id, const std::set<uint32_t> &user_scheme_group_set) const;
+    std::string create(uint32_t user_id, std::chrono::seconds timeout = std::chrono::seconds{3600},
+                       std::string session_id = {}) const;
     std::string decode_and_verify(const std::string& token) const;
     void verify(const jwt::decoded_jwt& jwt) const;
 private:

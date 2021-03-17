@@ -25,17 +25,26 @@ JWT_Helper::~JWT_Helper()
     delete algo_;
 }
 
-std::string JWT_Helper::create(uint32_t user_id, const std::set<uint32_t>& user_scheme_group_set) const
+std::string JWT_Helper::create(uint32_t user_id, std::chrono::seconds timeout, std::string session_id) const
 {
-    picojson::value::array user_scheme_group_array;
-    for (uint32_t scheme_group_id: user_scheme_group_set)
-        user_scheme_group_array.push_back(picojson::value{static_cast<double>(scheme_group_id)});
+    auto now = std::chrono::system_clock::now();
+
+    if (session_id.empty())
+    {
+        using years	= std::chrono::duration<int64_t, std::ratio<31556952>>;
+        auto tp_since_2021 = now - years{51};
+        auto dur_since_2021 = tp_since_2021.time_since_epoch();
+        int64_t ns_sice_2021 = std::chrono::duration_cast<std::chrono::nanoseconds>(dur_since_2021).count();
+
+        session_id = std::to_string(user_id);
+        session_id += std::to_string(ns_sice_2021);
+    }
 
     auto token = jwt::create()
-        .set_issued_at(std::chrono::system_clock::now())
-        .set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds{3600})
-        .set_payload_claim("user_id", picojson::value{static_cast<double>(user_id)})
-        .set_payload_claim("scheme_groups", picojson::value{user_scheme_group_array})
+        .set_issued_at(now)
+        .set_expires_at(now + timeout)
+        .set_payload_claim("user_id", picojson::value{static_cast<int64_t>(user_id)})
+        .set_payload_claim("session_id", picojson::value{std::move(session_id)})
         .sign(*algo_);
     return token;
 }

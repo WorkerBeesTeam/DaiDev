@@ -17,6 +17,7 @@
 #include "multipart_form_data_parser.h"
 #include "csrf_middleware.h"
 #include "auth_middleware.h"
+#include "rest_auth.h"
 #include "rest_scheme_group.h"
 #include "rest_scheme.h"
 #include "rest_user.h"
@@ -61,17 +62,7 @@ void Restful::run(DBus::Interface* dbus_iface, std::shared_ptr<JWT_Helper> jwt_h
 
         // register one or more handlers
         const std::string token_auth {"/token/auth"};
-        mux.handle(token_auth).post([](served::response &res, const served::request &req)
-        {
-            const picojson::object obj = Helper::parse_object(req.body());
-            const std::string& username = obj.at("username").get<std::string>();
-            const std::string& password = obj.at("password").get<std::string>();
-
-            std::cout << username << " + " << password << std::endl;
-
-            res.set_header("Content-Type", "application/json");
-        });
-
+        auto auth = std::make_shared<Auth>(mux);
         auto scheme_group = std::make_shared<Scheme_Group>(mux);
         auto scheme = std::make_shared<Scheme>(mux, dbus_iface);
         auto user = std::make_shared<User>(mux);
@@ -125,7 +116,7 @@ void Restful::run(DBus::Interface* dbus_iface, std::shared_ptr<JWT_Helper> jwt_h
 
         // register middleware / plugin
         mux.use_before(CSRF_Middleware());
-        mux.use_before(Auth_Middleware(std::move(jwt_helper), {token_auth}));
+        mux.use_before(Auth_Middleware(std::move(jwt_helper), config._token_timeout, Auth::paths()));
 
         served::net::server server{config.address_, config.port_, mux};
         server_ = &server;
