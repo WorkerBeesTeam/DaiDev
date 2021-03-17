@@ -44,11 +44,20 @@ Auth::Auth(served::multiplexer &mux)
 
 void Auth::auth_captcha(served::response &res, const served::request &req)
 {
-    const std::string ip = req.header("X-Real-IP");
-    if (!_blocker(ip))
-        throw served::request_error(served::status_4XX::NOT_ACCEPTABLE, "No captcha");
+    const std::string force_str = req.query["force"];
+    bool force = force_str == "true" || force_str == "1";
 
-    if (req.method() == served::GET)
+    const std::string ip = req.header("X-Real-IP");
+
+    bool have_captcha = true;
+    if (force)
+        _blocker << ip;
+    else
+        have_captcha = _blocker(ip);
+
+    if (!have_captcha)
+        res.set_status(served::status_2XX::NO_CONTENT);
+    else if (req.method() == served::GET)
     {
         std::string captcha_id;
         res << _blocker.get_captcha(ip, captcha_id);
