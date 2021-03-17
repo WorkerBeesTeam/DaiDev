@@ -1,3 +1,4 @@
+#include <mutex>
 
 #include "captcha_generator.h"
 #include "ip_blocker.h"
